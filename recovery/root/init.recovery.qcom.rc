@@ -1,0 +1,79 @@
+on boot
+    export LD_LIBRARY_PATH /vendor/lib:/system/lib
+
+    mkdir /external_sd
+
+    mkdir /synthesis
+    mount tmpfs tmpfs /synthesis nosuid nodev
+    chown root root /synthesis
+    chmod 0711 /synthesis
+
+    mkdir /synthesis/sphinx 0700 root root
+    mkdir /synthesis/hades 0775 root root
+    mkdir /synthesis/shsd 0711 root root
+
+    mkdir /internal_sd 0771 system system
+
+# SHARP_EXTEND filesystem 2012/03/19 add start
+    chown system system /internal_sd
+    chmod 0771 /internal_sd
+    # create the lost+found directories, so as to enforce our permissions
+    mkdir /internal_sd/lost+found 0770 root root
+# SHARP_EXTEND filesystem 2012/03/19 add end
+
+    chmod 0755 /vendor/bin/linker
+    chmod 0755 /vendor/bin/shdisp_process
+    write /sys/class/android_usb/android0/f_rndis/manufacturer $ro.product.manufacturer
+    write /sys/class/android_usb/android0/f_rndis/vendorID 04DD
+    write /sys/class/android_usb/android0/f_rndis/wceis 1
+    chown fdtp fdtp /dev/ttyGS1
+
+#host-api mkdir
+    mkdir /dev/bus 0755
+    mkdir /dev/bus/usb 0755
+
+#string descriptor
+    write /sys/class/android_usb/android0/iManufacturer "SHARP Corporation"
+    write /sys/class/android_usb/android0/iProduct "SH05E"
+    write /sys/class/android_usb/android0/iSerial $ro.serialno
+    write /sys/class/android_usb/android0/f_obex/obex_iInterface "SH05E OBEX Port"
+    write /sys/class/android_usb/android0/f_mdlm/mdlm_iInterface "SH05E High Speed Serial Port"
+    write /sys/class/android_usb/android0/f_modem/acm_iInterface "SH05E"
+    write /sys/class/android_usb/android0/f_mass_storage/msc_iInterface "SH05E SD Storage"
+    write /sys/class/android_usb/android0/f_mass_storage_cd/cd_iInterface "SH05E CD Storage"
+
+#class-specific paramater
+    write /sys/class/android_usb/android0/f_mdlm/guid EF331A401450422f897F5612E38D1BF1
+    write /sys/class/android_usb/android0/f_mass_storage/msc_inquiry_string "DOCOMO  SH05E           "
+    write /sys/class/android_usb/android0/f_mass_storage_cd/inquiry_string "DOCOMO  SH05E CDROM     "
+
+    setprop persist.sys.usb.config mass_storage,adb
+    setprop sys.usb.config $persist.sys.usb.config
+
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor 04DD
+    write /sys/class/android_usb/android0/idProduct 967B
+    write /sys/class/android_usb/android0/bDeviceClass 0
+    write /sys/class/android_usb/android0/functions $sys.usb.config
+    write /sys/class/android_usb/android0/enable 1
+    start adbd
+    setprop sys.usb.state $sys.usb.config
+
+service shdisp_process /vendor/bin/shdisp_process
+    socket shdisp_process stream 0660 root mount
+
+service usbmgrinitd /vendor/bin/usbmgrinitd
+    oneshot
+
+service shusb_process /vendor/bin/shusb_process
+
+# SHARP_EXTEND filesystem 2012/03/05 add start
+service sdcard /vendor/bin/sdcard /internal_sd/sdcard 1023 1023
+    user root
+    disabled
+    oneshot
+# SHARP_EXTEND filesystem 2012/03/05 add end
+
+# SHARP_EXTEND usbmgrd 2012.03.08 add start
+service usbmgrd /vendor/bin/usbmgrd
+# SHARP_EXTEND usbmgrd add end
